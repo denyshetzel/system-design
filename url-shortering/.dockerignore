@@ -1,0 +1,12 @@
+.git
+../.idea
+target
+#! allow native binary to be copied for Dockerfile.native
+url-shortering/.mvn
+url-shortering/mvnw
+url-shortering/mvnw.cmd
+*.iml
+Dockerfile
+url-shortering/Dockerfile
+**/.DS_Store
+**/node_modules

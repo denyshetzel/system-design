@@ -1,0 +1,254 @@
+openapi: 3.0.3
+info:
+  title: URL Shortening Service API
+  description: API for URL shortening operations
+  version: 1.0.0
+  contact:
+    name: System Design Team
+    email: contact@systemdesign.com
+
+servers:
+  - url: http://localhost:8080
+    description: Local development server
+
+paths:
+  /shortener:
+    post:
+      summary: Create shortened URL
+      description: Creates a new shortened URL from the original URL
+      operationId: createShortUrl
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateShortUrlRequest'
+      responses:
+        '201':
+          description: URL successfully shortened
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UrlResponse'
+        '400':
+          description: Invalid request data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /shortener/{shortUrl}:
+    get:
+      summary: Get URL details
+      description: Retrieves details of a shortened URL
+      operationId: getUrl
+      parameters:
+        - name: shortUrl
+          in: path
+          required: true
+          description: Short URL code
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 10
+          example: abc123
+      responses:
+        '200':
+          description: URL found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UrlResponse'
+        '404':
+          description: URL not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '410':
+          description: URL expired
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    delete:
+      summary: Delete shortened URL
+      description: Removes a shortened URL
+      operationId: deleteUrl
+      parameters:
+        - name: shortUrl
+          in: path
+          required: true
+          description: Short URL code
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 10
+          example: abc123
+      responses:
+        '204':
+          description: URL successfully deleted
+        '404':
+          description: URL not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /shortener/{shortUrl}/redirect:
+    get:
+      summary: Redirect to original URL
+      description: Redirects to the original URL and increments access count
+      operationId: redirectToOriginalUrl
+      parameters:
+        - name: shortUrl
+          in: path
+          required: true
+          description: Short URL code
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 10
+          example: abc123
+      responses:
+        '302':
+          description: Redirecting to original URL
+          headers:
+            Location:
+              description: Original URL to redirect to
+              schema:
+                type: string
+                format: uri
+        '404':
+          description: URL not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '410':
+          description: URL expired
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /shortener/{shortUrl}/stats:
+    get:
+      summary: Get URL statistics
+      description: Retrieves access statistics for a shortened URL
+      operationId: getUrlStats
+      parameters:
+        - name: shortUrl
+          in: path
+          required: true
+          description: Short URL code
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 10
+          example: abc123
+      responses:
+        '200':
+          description: Statistics retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UrlResponse'
+        '404':
+          description: URL not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '410':
+          description: URL expired
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  schemas:
+    CreateShortUrlRequest:
+      type: object
+      required:
+        - originalUrl
+      properties:
+        originalUrl:
+          type: string
+          format: uri
+          description: The original URL to be shortened
+          example: https://www.example.com/very/long/path
+        expirationSeconds:
+          type: integer
+          format: int64
+          description: Expiration time in seconds from now (optional)
+          example: 86400
+
+    UrlResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+          description: Unique identifier
+          example: 1
+        shortCode:
+          type: string
+          description: Short URL code
+          example: abc123
+        originalUrl:
+          type: string
+          format: uri
+          description: Original URL
+          example: https://www.example.com/very/long/path
+        createdAt:
+          type: string
+          format: date-time
+          description: Creation timestamp
+          example: "2024-01-01T10:00:00Z"
+        expiresAt:
+          type: string
+          format: date-time
+          description: Expiration timestamp (optional)
+          example: "2024-01-02T10:00:00Z"
+        accessCount:
+          type: integer
+          format: int64
+          description: Number of times accessed
+          example: 42
+        shortUrl:
+          type: string
+          format: uri
+          description: Full short URL
+          example: http://localhost:8080/shortening/api/shortener/abc123
+
+    ErrorResponse:
+      type: object
+      properties:
+        status:
+          type: integer
+          description: HTTP status code
+          example: 404
+        message:
+          type: string
+          description: Error message
+          example: "URL not found"
+        error:
+          type: string
+          description: Error type
+          example: "URL_NOT_FOUND"
+        timestamp:
+          type: string
+          format: date-time
+          description: Error timestamp
+          example: "2024-01-01T10:00:00Z"
+        path:
+          type: string
+          description: Request path
+          example: "/shortener/invalid"
+      required:
+        - status
+        - message
+        - timestamp

@@ -1,0 +1,126 @@
+services:
+  api:
+    container_name: url-shortering-api
+    image: url-shortering:latest
+    restart: unless-stopped
+    build:
+      context: ..
+      dockerfile: url-shortering/Dockerfile
+    env_file:
+      - .env
+    ports:
+      - "8081:8080"
+    environment:
+      TZ: "America/Cuiaba"
+      SPRING_DATASOURCE_DIALECT: ${DATASOURCE_DIALECT}
+      SPRING_DATASOURCE_URL: ${DATASOURCE_URL}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
+      SERVER_ERROR_INCLUDE_MESSAGE: ${SERVER_ERROR_INCLUDE-MESSAGE}
+      SERVER_ERROR_INCLUDE_STACKTRACE: ${SERVER_ERROR_INCLUDE-STACKTRACE}
+      SPRINGDOCS_ENABLED: ${SPRINGDOCS_ENABLED}
+      APP_BASE_URL: ${APP_BASE_URL}
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8080/actuator/health/readiness | grep UP"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    depends_on:
+      postgresdb:
+        condition: service_healthy
+    volumes:
+      - m2-cache:/root/.m2
+    networks:
+      - backend
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  api-native:
+    container_name: url-shortering-api-native
+    image: url-shortering:native
+    restart: unless-stopped
+    build:
+      context: ..
+      dockerfile: url-shortering/Dockerfile.native
+    env_file:
+      - .env
+    ports:
+      - "8082:8080"
+    environment:
+      TZ: "America/Cuiaba"
+      SPRING_DATASOURCE_DIALECT: ${DATASOURCE_DIALECT}
+      SPRING_DATASOURCE_URL: ${DATASOURCE_URL}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
+      SERVER_ERROR_INCLUDE_MESSAGE: ${SERVER_ERROR_INCLUDE-MESSAGE}
+      SERVER_ERROR_INCLUDE_STACKTRACE: ${SERVER_ERROR_INCLUDE-STACKTRACE}
+      SPRINGDOCS_ENABLED: ${SPRINGDOCS_ENABLED}
+      APP_BASE_URL: ${APP_BASE_URL}
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8080/actuator/health/readiness | grep UP"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    depends_on:
+      postgresdb:
+        condition: service_healthy
+    volumes:
+      - m2-cache:/root/.m2
+    networks:
+      - backend
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  postgresdb:
+    image: postgres:17.4
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - backend
+
+  pgadmin:
+    image: dpage/pgadmin4
+    restart: always
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD}
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+      PGADMIN_CONFIG_CHECK_EMAIL_DELIVERABILITY: 'False'
+      PGADMIN_CONFIG_ALLOW_SPECIAL_EMAIL_DOMAINS: '[]'
+      PGADMIN_CONFIG_GLOBALLY_DELIVERABLE: 'True'
+    profiles: ["dev"]
+    ports:
+      - "${PGADMIN_PORT:-5050}:80"
+    volumes:
+      - pgadmin:/var/lib/pgadmin/
+    networks:
+      - backend
+
+volumes:
+  postgres_data:
+  pgadmin:
+  m2-cache:
+
+networks:
+  backend:
+    driver: bridge
