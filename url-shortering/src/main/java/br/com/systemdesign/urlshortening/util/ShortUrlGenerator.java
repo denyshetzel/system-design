@@ -40,6 +40,11 @@ public class ShortUrlGenerator {
     private static synchronized long generateSnowflakeId() {
         long timestamp = System.currentTimeMillis() - EPOCH;
 
+        if (timestamp < lastTimestamp) {
+            log.warn("Clock moved backwards. Waiting until last known timestamp to avoid ID collisions.");
+            timestamp = waitNextMillis(lastTimestamp);
+        }
+
         if (timestamp == lastTimestamp) {
             sequence = (sequence + 1) & MAX_SEQUENCE;
             if (sequence == 0) {
@@ -74,14 +79,20 @@ public class ShortUrlGenerator {
     private static int getWorkerId() {
         try {
             String workerId = System.getenv("WORKER_ID");
-            if (workerId != null) return Integer.parseInt(workerId) & (int) MAX_WORKER_ID;
+            if (workerId != null) {
+                int parsed = Integer.parseInt(workerId);
+                if (parsed < 0 || parsed > MAX_WORKER_ID) {
+                    throw new IllegalArgumentException("WORKER_ID must be between 0 and " + MAX_WORKER_ID);
+                }
+                return parsed;
+            }
 
             // Use hostname hash as fallback
             String hostname = java.net.InetAddress.getLocalHost().getHostName();
             return (Math.abs(hostname.hashCode()) % (int) (MAX_WORKER_ID + 1));
         } catch (Exception e) {
-            log.warn("Could not determine worker ID, using random value", e);
-            return (int) (Math.random() * (MAX_WORKER_ID + 1));
+            log.warn("Could not determine worker ID, defaulting to 0. Configure WORKER_ID explicitly in production.", e);
+            return 0;
         }
     }
 

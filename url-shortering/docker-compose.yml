@@ -7,17 +7,18 @@ services:
       context: ..
       dockerfile: url-shortering/Dockerfile
     env_file:
-      - .env
+      - ${APP_ENV_FILE:-.env}
     ports:
       - "8081:8080"
     environment:
       TZ: "America/Cuiaba"
-      SPRING_DATASOURCE_DIALECT: ${DATASOURCE_DIALECT}
+      WORKER_ID: ${WORKER_ID_API:-1}
+      SPRING_JPA_DATABASE_PLATFORM: ${DATASOURCE_DIALECT}
       SPRING_DATASOURCE_URL: ${DATASOURCE_URL}
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
-      SERVER_ERROR_INCLUDE_MESSAGE: ${SERVER_ERROR_INCLUDE-MESSAGE}
-      SERVER_ERROR_INCLUDE_STACKTRACE: ${SERVER_ERROR_INCLUDE-STACKTRACE}
+      SERVER_ERROR_INCLUDE_MESSAGE: ${SERVER_ERROR_INCLUDE_MESSAGE}
+      SERVER_ERROR_INCLUDE_STACKTRACE: ${SERVER_ERROR_INCLUDE_STACKTRACE}
       SPRINGDOCS_ENABLED: ${SPRINGDOCS_ENABLED}
       APP_BASE_URL: ${APP_BASE_URL}
     healthcheck:
@@ -47,17 +48,18 @@ services:
       context: ..
       dockerfile: url-shortering/Dockerfile.native
     env_file:
-      - .env
+      - ${APP_ENV_FILE:-.env}
     ports:
       - "8082:8080"
     environment:
       TZ: "America/Cuiaba"
-      SPRING_DATASOURCE_DIALECT: ${DATASOURCE_DIALECT}
+      WORKER_ID: ${WORKER_ID_API_NATIVE:-2}
+      SPRING_JPA_DATABASE_PLATFORM: ${DATASOURCE_DIALECT}
       SPRING_DATASOURCE_URL: ${DATASOURCE_URL}
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
-      SERVER_ERROR_INCLUDE_MESSAGE: ${SERVER_ERROR_INCLUDE-MESSAGE}
-      SERVER_ERROR_INCLUDE_STACKTRACE: ${SERVER_ERROR_INCLUDE-STACKTRACE}
+      SERVER_ERROR_INCLUDE_MESSAGE: ${SERVER_ERROR_INCLUDE_MESSAGE}
+      SERVER_ERROR_INCLUDE_STACKTRACE: ${SERVER_ERROR_INCLUDE_STACKTRACE}
       SPRINGDOCS_ENABLED: ${SPRINGDOCS_ENABLED}
       APP_BASE_URL: ${APP_BASE_URL}
     healthcheck:
@@ -78,6 +80,28 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
+
+  k6:
+    image: grafana/k6:latest
+    profiles: ["loadtest"]
+    environment:
+      BASE_URL: http://api:8080
+      CREATE_PATH: /shortening/api/shortener
+      RATE: ${K6_RATE:-30}
+      DURATION: ${K6_DURATION:-2m}
+      PRE_ALLOCATED_VUS: ${K6_PRE_ALLOCATED_VUS:-20}
+      MAX_VUS: ${K6_MAX_VUS:-200}
+      P95_MS: ${K6_P95_MS:-400}
+      P99_MS: ${K6_P99_MS:-800}
+      ERROR_RATE: ${K6_ERROR_RATE:-0.01}
+    volumes:
+      - ./perf/k6:/scripts:ro
+    command: run /scripts/load-api.js
+    depends_on:
+      api:
+        condition: service_healthy
+    networks:
+      - backend
 
   postgresdb:
     image: postgres:17.4

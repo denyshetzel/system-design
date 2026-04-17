@@ -2,6 +2,7 @@ package br.com.systemdesign.urlshortening.entity;
 
 import br.com.systemdesign.urlshortening.util.ShortUrlGenerator;
 import jakarta.persistence.*;
+import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -13,7 +14,7 @@ import java.time.LocalDateTime;
     @Index(name = "idx_expires_at", columnList = "expires_at"),
     @Index(name = "idx_created_at", columnList = "created_at")
 })
-@NoArgsConstructor
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Getter
 public class ShortenedUrl {
 

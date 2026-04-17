@@ -9,5 +9,5 @@ public record CreateShortUrlRequest(
     @URL(message = "{validation.url.original.invalid}")
     @SafeUrl
     String originalUrl,
-    Integer expirationSeconds
+    Long expirationSeconds
 ) {}

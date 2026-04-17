@@ -4,17 +4,18 @@ import br.com.systemdesign.urlshortening.config.AppConstants;
 import br.com.systemdesign.urlshortening.dto.CreateShortUrlRequest;
 import br.com.systemdesign.urlshortening.dto.UrlResponse;
 import br.com.systemdesign.urlshortening.entity.ShortenedUrl;
-import br.com.systemdesign.urlshortening.exception.UrlExpiredException;
 import br.com.systemdesign.urlshortening.exception.UrlNotFoundException;
 import br.com.systemdesign.urlshortening.repository.ShortenedUrlRepository;
+import br.com.systemdesign.urlshortening.util.Validations;
 import lombok.CustomLog;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.retry.annotation.Backoff;
+import org.springframework.retry.annotation.Retryable;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.time.LocalDateTime;
 
 @Service
 @RequiredArgsConstructor
@@ -26,15 +27,16 @@ public class UrlShorteningService {
     @Value("${app.base.url}")
     private String baseUrl;
 
+    @Retryable(
+            retryFor = DataIntegrityViolationException.class,
+            maxAttempts = 5,
+            backoff = @Backoff(delay = 100, multiplier = 2)
+    )
     @Transactional
     public UrlResponse createShortUrl(CreateShortUrlRequest request) {
-        log.info("Creating shortened URL for: {}", request.originalUrl());
-        LocalDateTime expirationTime = null;
-        if (request.expirationSeconds() != null && request.expirationSeconds() > 0) {
-            expirationTime = LocalDateTime.now().plusSeconds(request.expirationSeconds());
-        }
+        var expirationTime = Validations.calculateExpiration(request.expirationSeconds());
         var shortenedUrl = new ShortenedUrl(request.originalUrl(), expirationTime);
-        var saved = repository.save(shortenedUrl);
+        var saved = repository.saveAndFlush(shortenedUrl);
         log.info("Shortened URL created successfully. Short Code: {}", saved.getShortUrl());
         return mapToResponse(saved);
     }
@@ -42,20 +44,18 @@ public class UrlShorteningService {
     @Transactional(readOnly = true)
     public UrlResponse getUrlByShortUrl(String shortCode) {
         log.info("Fetching URL by short code: {}", shortCode);
-        var url = repository
-                .findByShortUrl(shortCode)
-                .orElseThrow(() -> new UrlNotFoundException("URL not found"));
-        if (url.isExpired()) throw new UrlExpiredException("URL has expired");
-        return mapToResponse(url);
+        return repository.findByShortUrl(shortCode)
+                .filter(url -> !url.isExpired())
+                .map(this::mapToResponse)
+                .orElseThrow(() -> new UrlNotFoundException("URL not found or expired"));
     }
 
     @Transactional
     public String redirectToOriginalUrl(String shortCode) {
         log.info("Redirecting short code: {}", shortCode);
-        var shortenedUrl = repository
-                .findByShortUrl(shortCode)
-                .orElseThrow(() -> new UrlNotFoundException("URL not found"));
-        if (shortenedUrl.isExpired()) throw new UrlExpiredException("URL has expired");
+        var shortenedUrl = repository.findByShortUrl(shortCode)
+                .filter(url -> !url.isExpired())
+                .orElseThrow(() -> new UrlNotFoundException("URL not found or expired"));
         incrementAccessCountAsync(shortenedUrl);
         return shortenedUrl.getOriginalUrl();
     }
