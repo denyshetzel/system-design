@@ -39,6 +39,10 @@ export const options = {
 
 export default function () {
   const uniqueToken = `${__VU}-${__ITER}-${Date.now()}`;
+  // Rotate client IP to avoid hitting per-IP rate limit during load tests.
+  const ipOctetA = (__VU % 250) + 1;
+  const ipOctetB = (__ITER % 250) + 1;
+  const ipOctetC = (Math.floor(__ITER / 250) % 250) + 1;
   const payload = JSON.stringify({
     originalUrl: `https://example.com/perf/${uniqueToken}`,
     expirationSeconds: 86400,
@@ -47,6 +51,7 @@ export default function () {
   const params = {
     headers: {
       "Content-Type": "application/json",
+      "X-Forwarded-For": `10.${ipOctetA}.${ipOctetB}.${ipOctetC}`,
     },
     tags: {
       endpoint: "create_short_url",

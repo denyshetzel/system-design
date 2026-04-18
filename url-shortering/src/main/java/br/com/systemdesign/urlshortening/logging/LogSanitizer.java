@@ -11,9 +11,7 @@ public final class LogSanitizer {
 
     public static String sanitize(String input) {
         if (input == null) return null;
-        // Remove control chars and trim
-        String sanitized = input.replaceAll("\\p{Cntrl}", "").trim();
-        // Neutralize common injection vectors for log viewers / consoles
+        var sanitized = input.replaceAll("\\p{Cntrl}", "").trim();
         sanitized = sanitized
                 .replace("<", "[")
                 .replace(">", "]")
