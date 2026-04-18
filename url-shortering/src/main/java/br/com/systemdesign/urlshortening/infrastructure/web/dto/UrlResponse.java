@@ -1,4 +1,4 @@
-package br.com.systemdesign.urlshortening.dto;
+package br.com.systemdesign.urlshortening.infrastructure.web.dto;
 
 import java.time.LocalDateTime;
 

@@ -1,6 +1,7 @@
-package br.com.systemdesign.urlshortening.config;
+package br.com.systemdesign.urlshortening.infrastructure.web.config;
 
-import br.com.systemdesign.urlshortening.ratelimit.RateLimitInterceptor;
+import br.com.systemdesign.urlshortening.config.AppConstants;
+import br.com.systemdesign.urlshortening.infrastructure.web.ratelimit.RateLimitInterceptor;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
@@ -18,4 +19,3 @@ public class WebMvcConfig implements WebMvcConfigurer {
                 .addPathPatterns(AppConstants.API_SHORTENER + "/**");
     }
 }
-

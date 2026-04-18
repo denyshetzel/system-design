@@ -1,4 +1,4 @@
-package br.com.systemdesign.urlshortening.dto;
+package br.com.systemdesign.urlshortening.infrastructure.web.dto;
 
 import br.com.systemdesign.urlshortening.validation.SafeUrl;
 import jakarta.validation.constraints.NotBlank;

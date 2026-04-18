@@ -1,6 +1,6 @@
 package br.com.systemdesign.urlshortening.service;
 
-import br.com.systemdesign.urlshortening.repository.ShortenedUrlRepository;
+import br.com.systemdesign.urlshortening.application.port.out.ShortenedLinkStore;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -18,18 +18,17 @@ import static org.mockito.Mockito.when;
 class UrlCleanupServiceTest {
 
     @Mock
-    private ShortenedUrlRepository repository;
+    private ShortenedLinkStore store;
 
     @InjectMocks
     private UrlCleanupService service;
 
     @Test
     void shouldDeleteExpiredUrls() {
-        when(repository.deleteByExpiresAtBefore(any(LocalDateTime.class))).thenReturn(3L);
+        when(store.deleteExpiredBefore(any(LocalDateTime.class))).thenReturn(3L);
 
         service.cleanupExpiredUrls();
 
-        verify(repository, times(1)).deleteByExpiresAtBefore(any(LocalDateTime.class));
+        verify(store, times(1)).deleteExpiredBefore(any(LocalDateTime.class));
     }
 }
-

@@ -1,12 +1,17 @@
 package br.com.systemdesign.urlshortening.service;
 
+import br.com.systemdesign.urlshortening.application.port.in.CreateShortUrlUseCase;
+import br.com.systemdesign.urlshortening.application.port.in.DeleteShortUrlUseCase;
+import br.com.systemdesign.urlshortening.application.port.in.GetShortUrlUseCase;
+import br.com.systemdesign.urlshortening.application.port.in.RedirectShortUrlUseCase;
+import br.com.systemdesign.urlshortening.application.port.in.UrlShorteningFacade;
+import br.com.systemdesign.urlshortening.application.model.CreateShortUrlCommand;
+import br.com.systemdesign.urlshortening.application.model.ShortenedUrlView;
+import br.com.systemdesign.urlshortening.application.port.out.ShortenedLinkStore;
 import br.com.systemdesign.urlshortening.config.AppConstants;
-import br.com.systemdesign.urlshortening.dto.CreateShortUrlRequest;
-import br.com.systemdesign.urlshortening.dto.UrlResponse;
-import br.com.systemdesign.urlshortening.entity.ShortenedUrl;
+import br.com.systemdesign.urlshortening.domain.model.ShortenedLink;
 import br.com.systemdesign.urlshortening.exception.UrlNotFoundException;
-import br.com.systemdesign.urlshortening.repository.ShortenedUrlRepository;
-import br.com.systemdesign.urlshortening.util.Validations;
+import br.com.systemdesign.urlshortening.validation.Validations;
 import lombok.CustomLog;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -19,9 +24,14 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @RequiredArgsConstructor
 @CustomLog
-public class UrlShorteningService {
+public class UrlShorteningService implements
+        UrlShorteningFacade,
+        CreateShortUrlUseCase,
+        GetShortUrlUseCase,
+        RedirectShortUrlUseCase,
+        DeleteShortUrlUseCase {
 
-    private final ShortenedUrlRepository repository;
+    private final ShortenedLinkStore store;
 
     @Value("${app.base.url}")
     private String baseUrl;
@@ -32,55 +42,69 @@ public class UrlShorteningService {
             backoff = @Backoff(delay = 100, multiplier = 2)
     )
     @Transactional
-    public UrlResponse createShortUrl(CreateShortUrlRequest request) {
-        var expirationTime = Validations.calculateExpiration(request.expirationSeconds());
-        var shortenedUrl = new ShortenedUrl(request.originalUrl(), expirationTime);
-        var saved = repository.saveAndFlush(shortenedUrl);
-        log.debug("Shortened URL created successfully. Short Code: {}", saved.getShortUrl());
+    public ShortenedUrlView createShortUrl(CreateShortUrlCommand command) {
+        var expirationTime = Validations.calculateExpiration(command.expirationSeconds());
+        var saved = store.save(command.originalUrl(), expirationTime);
+        log.debug("Shortened URL created successfully. Short Code: {}", saved.shortCode());
         return mapToResponse(saved);
     }
 
-    @Transactional(readOnly = true)
-    public UrlResponse getUrlByShortUrl(String shortCode) {
+    @Transactional
+    public ShortenedUrlView getUrlByShortUrl(String shortCode) {
         log.debug("Fetching URL by short code: {}", shortCode);
-        return repository.findByShortUrl(shortCode)
+        var shortenedUrl = store.findByShortCode(shortCode)
                 .filter(url -> !url.isExpired())
-                .map(this::mapToResponse)
                 .orElseThrow(() -> new UrlNotFoundException("URL not found or expired"));
+
+        Long updatedAccessCount = store.incrementAccessCountByIdReturning(shortenedUrl.id());
+        if (updatedAccessCount == null) {
+            log.warn("Access count was not incremented for short code: {}", shortCode);
+            throw new UrlNotFoundException("URL not found or expired");
+        }
+
+        var updatedLink = new ShortenedLink(
+                shortenedUrl.id(),
+                shortenedUrl.shortCode(),
+                shortenedUrl.originalUrl(),
+                shortenedUrl.createdAt(),
+                shortenedUrl.expiresAt(),
+                updatedAccessCount
+        );
+        return mapToResponse(updatedLink);
     }
 
     @Transactional
     public String redirectToOriginalUrl(String shortCode) {
         log.debug("Redirecting short code: {}", shortCode);
-        var shortenedUrl = repository.findByShortUrl(shortCode)
+        var shortenedUrl = store.findByShortCode(shortCode)
                 .filter(url -> !url.isExpired())
                 .orElseThrow(() -> new UrlNotFoundException("URL not found or expired"));
-        int updated = repository.incrementAccessCountById(shortenedUrl.getId());
-        if (updated == 0) {
+        Long updated = store.incrementAccessCountByIdReturning(shortenedUrl.id());
+        if (updated == null) {
             log.warn("Access count was not incremented for short code: {}", shortCode);
         }
-        return shortenedUrl.getOriginalUrl();
+        return shortenedUrl.originalUrl();
     }
 
     @Transactional
     public void deleteUrl(String shortCode) {
         log.debug("Removing URL with short code: {}", shortCode);
-        var url = repository
-                .findByShortUrl(shortCode)
+        var url = store
+                .findByShortCode(shortCode)
                 .orElseThrow(() -> new UrlNotFoundException("URL not found"));
-        repository.delete(url);
+        store.deleteById(url.id());
         log.debug("URL successfully removed: {}", shortCode);
     }
 
-    private UrlResponse mapToResponse(ShortenedUrl shortenedUrl) {
-        return new UrlResponse(
-                shortenedUrl.getId(),
-                shortenedUrl.getShortUrl(),
-                shortenedUrl.getOriginalUrl(),
-                baseUrl + AppConstants.API_SHORTENER + "/" + shortenedUrl.getShortUrl(),
-                shortenedUrl.getCreatedAt(),
-                shortenedUrl.getExpiresAt(),
-                shortenedUrl.getAccessCount()
+    private ShortenedUrlView mapToResponse(ShortenedLink shortenedUrl) {
+        return new ShortenedUrlView(
+                shortenedUrl.id(),
+                shortenedUrl.shortCode(),
+                shortenedUrl.originalUrl(),
+                baseUrl + AppConstants.API_SHORTENER + "/" + shortenedUrl.shortCode(),
+                shortenedUrl.createdAt(),
+                shortenedUrl.expiresAt(),
+                shortenedUrl.accessCount()
         );
     }
 

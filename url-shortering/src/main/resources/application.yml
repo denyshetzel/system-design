@@ -72,3 +72,5 @@ app:
     redirect-per-minute: ${APP_RATE_LIMIT_REDIRECT_PER_MINUTE:300}
   cleanup:
     expired-urls-cron: ${APP_CLEANUP_EXPIRED_URLS_CRON:0 */15 * * * *}
+  observability:
+    request-log-sample-percent: ${APP_OBSERVABILITY_REQUEST_LOG_SAMPLE_PERCENT:1.0}

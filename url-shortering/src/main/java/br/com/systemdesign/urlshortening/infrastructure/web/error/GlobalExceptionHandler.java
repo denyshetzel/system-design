@@ -1,6 +1,9 @@
-package br.com.systemdesign.urlshortening.exception;
+package br.com.systemdesign.urlshortening.infrastructure.web.error;
 
-import br.com.systemdesign.urlshortening.dto.ErrorResponse;
+import br.com.systemdesign.urlshortening.exception.RateLimitExceededException;
+import br.com.systemdesign.urlshortening.exception.UrlExpiredException;
+import br.com.systemdesign.urlshortening.exception.UrlNotFoundException;
+import br.com.systemdesign.urlshortening.infrastructure.web.dto.ErrorResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
 import lombok.CustomLog;

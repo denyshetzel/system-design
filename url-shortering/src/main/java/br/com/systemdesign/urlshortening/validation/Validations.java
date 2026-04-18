@@ -1,4 +1,4 @@
-package br.com.systemdesign.urlshortening.util;
+package br.com.systemdesign.urlshortening.validation;
 
 import lombok.experimental.UtilityClass;
 

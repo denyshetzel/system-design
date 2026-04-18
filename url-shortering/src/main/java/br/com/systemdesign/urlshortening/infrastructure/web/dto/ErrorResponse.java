@@ -1,4 +1,4 @@
-package br.com.systemdesign.urlshortening.dto;
+package br.com.systemdesign.urlshortening.infrastructure.web.dto;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.Builder;

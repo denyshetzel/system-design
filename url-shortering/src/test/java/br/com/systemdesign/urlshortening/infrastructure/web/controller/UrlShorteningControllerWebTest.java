@@ -1,8 +1,10 @@
-package br.com.systemdesign.urlshortening.controller;
+package br.com.systemdesign.urlshortening.infrastructure.web.controller;
 
-import br.com.systemdesign.urlshortening.dto.CreateShortUrlRequest;
-import br.com.systemdesign.urlshortening.dto.UrlResponse;
-import br.com.systemdesign.urlshortening.service.UrlShorteningService;
+import br.com.systemdesign.urlshortening.application.model.CreateShortUrlCommand;
+import br.com.systemdesign.urlshortening.application.model.ShortenedUrlView;
+import br.com.systemdesign.urlshortening.application.port.in.UrlShorteningFacade;
+import br.com.systemdesign.urlshortening.infrastructure.web.dto.CreateShortUrlRequest;
+import br.com.systemdesign.urlshortening.infrastructure.web.dto.UrlResponse;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -21,14 +23,14 @@ import static org.assertj.core.api.Assertions.assertThat;
 @ExtendWith(MockitoExtension.class)
 class UrlShorteningControllerWebTest {
     @Mock
-    private UrlShorteningService service;
+    private UrlShorteningFacade facade;
 
     @InjectMocks
     private UrlShorteningController controller;
 
     @Test
     void shouldCreateShortUrl() {
-        UrlResponse response = new UrlResponse(
+        ShortenedUrlView response = new ShortenedUrlView(
                 1L,
                 "abc123",
                 "https://example.com",
@@ -37,7 +39,7 @@ class UrlShorteningControllerWebTest {
                 null,
                 0L
         );
-        when(service.createShortUrl(any(CreateShortUrlRequest.class))).thenReturn(response);
+        when(facade.createShortUrl(any(CreateShortUrlCommand.class))).thenReturn(response);
 
         CreateShortUrlRequest request = new CreateShortUrlRequest("https://example.com", 3600L);
         ResponseEntity<UrlResponse> result = controller.createShortUrl(request);
@@ -49,7 +51,7 @@ class UrlShorteningControllerWebTest {
 
     @Test
     void shouldRedirectToOriginalUrl() {
-        when(service.redirectToOriginalUrl("abc123")).thenReturn("https://example.com/page");
+        when(facade.redirectToOriginalUrl("abc123")).thenReturn("https://example.com/page");
 
         ResponseEntity<Void> result = controller.redirectToOriginalUrl("abc123");
 
@@ -62,6 +64,6 @@ class UrlShorteningControllerWebTest {
         ResponseEntity<Void> result = controller.deleteUrl("abc123");
 
         assertThat(result.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
-        verify(service).deleteUrl("abc123");
+        verify(facade).deleteUrl("abc123");
     }
 }

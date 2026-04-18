@@ -1,4 +1,4 @@
-package br.com.systemdesign.urlshortening.entity;
+package br.com.systemdesign.urlshortening.infrastructure.persistence.jpa.entity;
 
 import br.com.systemdesign.urlshortening.util.ShortUrlGenerator;
 import jakarta.persistence.*;

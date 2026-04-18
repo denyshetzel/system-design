@@ -1,5 +1,6 @@
 package br.com.systemdesign.urlshortening.util;
 
+import br.com.systemdesign.urlshortening.validation.Validations;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDateTime;
