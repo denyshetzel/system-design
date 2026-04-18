@@ -12,6 +12,7 @@ public record ErrorResponse(
         String message,
         String error,
         LocalDateTime timestamp,
-        String path
+        String path,
+        String requestId
 ) { }
 

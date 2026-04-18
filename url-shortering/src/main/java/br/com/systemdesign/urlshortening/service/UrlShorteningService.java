@@ -13,7 +13,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Retryable;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -37,13 +36,13 @@ public class UrlShorteningService {
         var expirationTime = Validations.calculateExpiration(request.expirationSeconds());
         var shortenedUrl = new ShortenedUrl(request.originalUrl(), expirationTime);
         var saved = repository.saveAndFlush(shortenedUrl);
-        log.info("Shortened URL created successfully. Short Code: {}", saved.getShortUrl());
+        log.debug("Shortened URL created successfully. Short Code: {}", saved.getShortUrl());
         return mapToResponse(saved);
     }
 
     @Transactional(readOnly = true)
     public UrlResponse getUrlByShortUrl(String shortCode) {
-        log.info("Fetching URL by short code: {}", shortCode);
+        log.debug("Fetching URL by short code: {}", shortCode);
         return repository.findByShortUrl(shortCode)
                 .filter(url -> !url.isExpired())
                 .map(this::mapToResponse)
@@ -52,33 +51,25 @@ public class UrlShorteningService {
 
     @Transactional
     public String redirectToOriginalUrl(String shortCode) {
-        log.info("Redirecting short code: {}", shortCode);
+        log.debug("Redirecting short code: {}", shortCode);
         var shortenedUrl = repository.findByShortUrl(shortCode)
                 .filter(url -> !url.isExpired())
                 .orElseThrow(() -> new UrlNotFoundException("URL not found or expired"));
-        incrementAccessCountAsync(shortenedUrl);
+        int updated = repository.incrementAccessCountById(shortenedUrl.getId());
+        if (updated == 0) {
+            log.warn("Access count was not incremented for short code: {}", shortCode);
+        }
         return shortenedUrl.getOriginalUrl();
     }
 
     @Transactional
     public void deleteUrl(String shortCode) {
-        log.info("Removing URL with short code: {}", shortCode);
+        log.debug("Removing URL with short code: {}", shortCode);
         var url = repository
                 .findByShortUrl(shortCode)
                 .orElseThrow(() -> new UrlNotFoundException("URL not found"));
         repository.delete(url);
-        log.info("URL successfully removed: {}", shortCode);
-    }
-
-    @Async("applicationTaskExecutor")
-    @Transactional
-    public void incrementAccessCountAsync(ShortenedUrl shortenedUrl) {
-        try {
-            shortenedUrl.incrementAccessCount();
-            repository.save(shortenedUrl);
-        } catch (Exception e) {
-            log.error("Failed to increment access count for URL: {}", shortenedUrl.getShortUrl(), e);
-        }
+        log.debug("URL successfully removed: {}", shortCode);
     }
 
     private UrlResponse mapToResponse(ShortenedUrl shortenedUrl) {

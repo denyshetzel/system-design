@@ -5,6 +5,10 @@ WORKDIR /app
 
 ENV LANG=en_US.UTF-8
 ENV LC_ALL=en_US.UTF-8
+ENV SPRING_PROFILES_ACTIVE=prod
+ENV SPRINGDOCS_ENABLED=false
+ENV SPRINGDOC_API_DOCS_ENABLED=false
+ENV SPRINGDOC_SWAGGER_UI_ENABLED=false
 
 COPY . .
 
@@ -12,7 +16,7 @@ RUN chmod +x mvnw
 RUN ./mvnw install -N -f pom.xml
 #RUN ./mvnw -pl url-shortering -Pnative clean package
 #RUN ./mvnw -pl url-shortering -Pnative native:compile
-RUN ./mvnw -pl url-shortering -Pnative -e -X native:compile
+RUN ./mvnw -pl url-shortering -Pnative clean native:compile -DskipTests -DskipNativeTests
 
 
 # Etapa final: distroless atualizado
@@ -29,4 +33,3 @@ RUN apt-get update && apt-get install -y zlib1g && rm -rf /var/lib/apt/lists/*
 USER nobody
 EXPOSE 8080
 ENTRYPOINT ["./url-shortering"]
-

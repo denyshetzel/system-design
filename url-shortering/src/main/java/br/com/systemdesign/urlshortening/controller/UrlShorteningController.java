@@ -27,7 +27,7 @@ public class UrlShorteningController {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public ResponseEntity<UrlResponse> createShortUrl(@Valid @RequestBody CreateShortUrlRequest request) {
-        log.info("Creating shortened URL for: {}", request.originalUrl());
+        log.debug("Creating shortened URL for: {}", request.originalUrl());
         var response = service.createShortUrl(request);
         log.debug("Shortened URL created with code: {}", response.shortCode());
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
@@ -39,7 +39,7 @@ public class UrlShorteningController {
             @NotBlank(message = "{validation.shortcode.required}")
             @Size(min = 1, max = 10, message = "Short code must be between 1 and 10 characters")
             String shortUrl) {
-        log.info("Retrieving URL details for code: {}", shortUrl);
+        log.debug("Retrieving URL details for code: {}", shortUrl);
         var response = service.getUrlByShortUrl(shortUrl);
         return ResponseEntity.ok(response);
     }
@@ -50,7 +50,7 @@ public class UrlShorteningController {
             @NotBlank(message = "{validation.shortcode.required}")
             @Size(min = 1, max = 10, message = "Short code must be between 1 and 10 characters")
             String shortUrl) {
-        log.info("Redirecting short code: {}", shortUrl);
+        log.debug("Redirecting short code: {}", shortUrl);
         var originalUrl = service.redirectToOriginalUrl(shortUrl);
         return ResponseEntity.status(HttpStatus.FOUND)
                 .header("Location", originalUrl)
@@ -65,20 +65,9 @@ public class UrlShorteningController {
             @NotBlank(message = "{validation.shortcode.required}")
             @Size(min = 1, max = 10, message = "Short code must be between 1 and 10 characters")
             String shortUrl) {
-        log.info("Deleting URL with code: {}", shortUrl);
+        log.debug("Deleting URL with code: {}", shortUrl);
         service.deleteUrl(shortUrl);
         return ResponseEntity.noContent().build();
-    }
-
-    @GetMapping("/{shortUrl}/stats")
-    public ResponseEntity<UrlResponse> getUrlStats(
-            @PathVariable
-            @NotBlank(message = "{validation.shortcode.required}")
-            @Size(min = 1, max = 10, message = "Short code must be between 1 and 10 characters")
-            String shortUrl) {
-        log.info("Retrieving statistics for URL code: {}", shortUrl);
-        var response = service.getUrlByShortUrl(shortUrl);
-        return ResponseEntity.ok(response);
     }
 
 }

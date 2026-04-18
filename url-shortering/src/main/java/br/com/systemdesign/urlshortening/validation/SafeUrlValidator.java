@@ -2,9 +2,12 @@ package br.com.systemdesign.urlshortening.validation;
 
 import jakarta.validation.ConstraintValidator;
 import jakarta.validation.ConstraintValidatorContext;
+import lombok.NoArgsConstructor;
+
 import java.net.URI;
 import java.util.regex.Pattern;
 
+@NoArgsConstructor
 public class SafeUrlValidator implements ConstraintValidator<SafeUrl, String> {
 
     private static final int MAX_LENGTH = 2000;
